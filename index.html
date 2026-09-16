@@ -36,6 +36,7 @@
             position: relative;
         }
 
+        /* 공통 카드 스타일 */
         .card {
             width: 160px;
             height: 260px;
@@ -48,11 +49,13 @@
             --move-y: 0px;
         }
 
+        /* 카드 애니메이션(선택 시) */
         .card.active {
             transform: translate(var(--move-x), var(--move-y)) scale(2.6);
             z-index: 100;
         }
 
+        /* 선택 안 된 카드 숨기기 */
         .card-container.has-active .card:not(.active) {
             opacity: 0;
             pointer-events: none;
@@ -68,7 +71,8 @@
             border-radius: 15px;
         }
 
-        .card.active .card-inner {
+        /* 카드가 뒤집혔을 때 */
+        .card.active .card-inner, .result-card .card-inner {
             transform: rotateY(180deg);
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
@@ -111,38 +115,72 @@
         .card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #2c3e50; }
         .card-desc { font-size: 11px; color: #666; word-break: keep-all; line-height: 1.4; }
 
-        #alreadyParticipated {
-            display: none;
-            font-size: 20px;
+
+        /* ----- 새로고침 시 보여줄 결과 화면 스타일 ----- */
+        #resultScreen {
+            display: none; /* 처음엔 숨김 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: #1a1a2e;
+            z-index: 200;
+            gap: 220px; /* 카드 확대 크기를 고려한 여백 */
+        }
+
+        .result-message {
+            font-size: 24px;
             color: #f39c12;
             font-weight: bold;
             text-align: center;
             line-height: 1.5;
+            z-index: 201;
         }
 
+        .result-message span {
+            font-size: 16px;
+            color: #ffffff;
+            font-weight: normal;
+        }
+
+        /* 결과 화면의 카드 크기 (클릭된 애니메이션 후의 크기와 동일하게 고정) */
+        .result-card {
+            transform: scale(2.6);
+            pointer-events: none;
+        }
+
+
+        /* ----- 모바일 화면 대응 ----- */
         @media (max-width: 600px) {
             .card-container { gap: 12px; }
             .card { width: 100px; height: 160px; }
+            
             .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); }
+            
             .card-icon { font-size: 35px; margin-bottom: 5px; }
             .card-title { font-size: 13px; margin-bottom: 4px; }
             .card-desc { font-size: 9px; }
+
+            .result-card { transform: scale(3.2); }
+            #resultScreen { gap: 160px; }
+            .result-message { font-size: 20px; }
+            .result-message span { font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
+    <!-- 메인 화면 텍스트 -->
     <div class="header-text" id="headerText">
         당신의 건강 타로를 1장 뽑아보세요
     </div>
 
-    <!-- 이미 참여한 유저에게 보여줄 메시지 -->
-    <div id="alreadyParticipated">
-        이미 이벤트에 참여하셨습니다!<br>선물 수령처로 이동해 주세요.
-    </div>
-
+    <!-- 카드 3장 컨테이너 -->
     <div class="card-container" id="cardContainer">
-        <!-- 클릭 시 어떤 카드를 뽑았는지 이름을 같이 넘겨줍니다 -->
         <div class="card" onclick="selectCard(this, '주사기')">
             <div class="card-inner">
                 <div class="card-front"></div>
@@ -177,24 +215,62 @@
         </div>
     </div>
 
+
+    <!-- ----- 새로고침 시 보여줄 결과 화면 ----- -->
+    <div id="resultScreen">
+        <div class="result-message">
+            이미 참여하셨습니다!<br>
+            <span>진행요원에게 이 화면을 보여주시고 선물을 수령하세요.</span>
+        </div>
+        
+        <!-- 뽑았던 카드를 띄워줄 공간 -->
+        <div class="card result-card">
+            <div class="card-inner">
+                <div class="card-front"></div>
+                <div class="card-back" style="border: 3px solid #f39c12;"> <!-- 구분을 위해 금색 테두리 추가 -->
+                    <div class="card-icon" id="finalIcon"></div>
+                    <div class="card-title" id="finalTitle"></div>
+                    <div class="card-desc" id="finalDesc"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 전달해주신 구글 웹 앱 URL이 적용되었습니다.
         const scriptURL = "https://script.google.com/macros/s/AKfycbzdztwuybf2EGffQ1d_F9ezHOZhrDplzhksRNaRsqwtH68YTpyIMtfttTH8P7khHgRw/exec"; 
 
-        // 페이지가 열릴 때 이미 참여한 기록이 있는지 확인합니다.
+        // 카드들의 정보 (새로고침 시 화면을 다시 그리기 위해 저장)
+        const cardsData = {
+            '주사기': { icon: '💉', desc: '예방접종을 통해 질병을 미리 예방하세요.' },
+            '마스크': { icon: '😷', desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
+            '손과 물': { icon: '🧼', desc: '흐르는 물에 비누로 30초 이상 손씻기!' }
+        };
+
+        // 페이지가 열릴 때 실행
         window.onload = function() {
-            if (localStorage.getItem('hasDrawnTarot')) {
+            const savedCardName = localStorage.getItem('drawnCardName');
+            
+            // 만약 유저가 이미 뽑은 카드 이름이 저장되어 있다면
+            if (savedCardName && cardsData[savedCardName]) {
+                // 기존의 카드 3장과 상단 텍스트는 숨김
                 document.getElementById('cardContainer').style.display = 'none';
                 document.getElementById('headerText').style.display = 'none';
-                document.getElementById('alreadyParticipated').style.display = 'block';
+                
+                // 결과 화면의 카드에 데이터 입력
+                document.getElementById('finalIcon').innerText = cardsData[savedCardName].icon;
+                document.getElementById('finalTitle').innerText = savedCardName;
+                document.getElementById('finalDesc').innerText = cardsData[savedCardName].desc;
+
+                // 결과 화면 표시
+                document.getElementById('resultScreen').style.display = 'flex';
             }
         };
 
         let isDrawing = false; // 중복 클릭 방지용 변수
 
         function selectCard(selectedCard, cardName) {
-            // 이미 뽑는 중이거나 새로고침 꼼수를 썼다면 차단
-            if (isDrawing || localStorage.getItem('hasDrawnTarot')) return;
+            // 이미 뽑는 중이거나, 로컬 스토리지에 기록이 있으면 클릭 무시
+            if (isDrawing || localStorage.getItem('drawnCardName')) return;
             isDrawing = true;
 
             const container = document.getElementById('cardContainer');
@@ -214,8 +290,8 @@
             selectedCard.classList.add('active');
             container.classList.add('has-active');
             
-            // 스마트폰에 "이 사람은 뽑았다"는 기록을 남김 (새로고침 방지)
-            localStorage.setItem('hasDrawnTarot', 'true');
+            // ★ 스마트폰에 어떤 카드를 뽑았는지 이름을 기록 (새로고침 시 보여주기 위함)
+            localStorage.setItem('drawnCardName', cardName);
 
             // 상단 텍스트 변경
             header.style.opacity = '0';
@@ -230,7 +306,7 @@
 
             fetch(scriptURL, { 
                 method: 'POST', 
-                mode: 'no-cors', // CORS 보안 에러 방지
+                mode: 'no-cors',
                 body: formData
             })
             .then(() => console.log('시트에 저장 완료 요청 전송됨'))
