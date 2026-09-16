@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 💡 수정됨: 모바일에서 더블 탭 확대 방지를 위해 maximum-scale=1.0, user-scalable=no 추가 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>건강 타로 카드 뽑기</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
@@ -19,6 +20,9 @@
             font-family: 'Noto Sans KR', sans-serif;
             overflow: hidden;
             color: white;
+            /* 아이폰 텍스트 선택 방지 */
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .header-text {
@@ -36,7 +40,6 @@
             position: relative;
         }
 
-        /* 공통 카드 스타일 */
         .card {
             width: 160px;
             height: 260px;
@@ -47,15 +50,15 @@
             transform-origin: center center;
             --move-x: 0px;
             --move-y: 0px;
+            /* 모바일 터치 하이라이트 제거 */
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* 카드 애니메이션(선택 시) */
         .card.active {
             transform: translate(var(--move-x), var(--move-y)) scale(2.6);
             z-index: 100;
         }
 
-        /* 선택 안 된 카드 숨기기 */
         .card-container.has-active .card:not(.active) {
             opacity: 0;
             pointer-events: none;
@@ -71,7 +74,6 @@
             border-radius: 15px;
         }
 
-        /* 카드가 뒤집혔을 때 */
         .card.active .card-inner, .result-card .card-inner {
             transform: rotateY(180deg);
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
@@ -115,10 +117,8 @@
         .card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #2c3e50; }
         .card-desc { font-size: 11px; color: #666; word-break: keep-all; line-height: 1.4; }
 
-
-        /* ----- 새로고침 시 보여줄 결과 화면 스타일 ----- */
         #resultScreen {
-            display: none; /* 처음엔 숨김 */
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -129,11 +129,7 @@
             left: 0;
             background-color: #1a1a2e;
             z-index: 200;
-            
-            /* 텍스트와 카드 사이의 여백을 넉넉하게 변경 */
             gap: 250px; 
-            
-            /* 전체 화면을 살짝 위로 올리기 위해 하단 패딩 추가 */
             padding-bottom: 60px; 
             box-sizing: border-box;
         }
@@ -145,6 +141,11 @@
             text-align: center;
             line-height: 1.5;
             z-index: 201;
+            /* 💡 수정됨: iOS 사파리가 버튼으로 인식하도록 커서 포인터 추가 및 하이라이트 제거 */
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            padding: 10px; /* 터치 영역 확보 */
         }
 
         .result-message span {
@@ -153,32 +154,24 @@
             font-weight: normal;
         }
 
-        /* 결과 화면의 카드 크기 */
         .result-card {
             transform: scale(2.6);
             pointer-events: none;
         }
 
-
-        /* ----- 모바일 화면 대응 ----- */
         @media (max-width: 600px) {
             .card-container { gap: 12px; }
             .card { width: 100px; height: 160px; }
-            
             .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); }
-            
             .card-icon { font-size: 35px; margin-bottom: 5px; }
             .card-title { font-size: 13px; margin-bottom: 4px; }
             .card-desc { font-size: 9px; }
-
             .result-card { transform: scale(3.2); }
             
-            /* 모바일에서 글자가 겹치지 않게 간격을 더 크게 수정 */
             #resultScreen { 
                 gap: 220px; 
-                padding-bottom: 80px; /* 폰 화면에서 균형감 있게 조금 더 위로 */
+                padding-bottom: 80px;
             }
-            
             .result-message { font-size: 20px; }
             .result-message span { font-size: 14px; }
         }
@@ -186,12 +179,10 @@
 </head>
 <body>
 
-    <!-- 메인 화면 텍스트 -->
     <div class="header-text" id="headerText">
         당신의 건강 타로를 1장 뽑아보세요
     </div>
 
-    <!-- 카드 3장 컨테이너 -->
     <div class="card-container" id="cardContainer">
         <div class="card" onclick="selectCard(this, '주사기')">
             <div class="card-inner">
@@ -227,15 +218,13 @@
         </div>
     </div>
 
-
-    <!-- ----- 새로고침 시 보여줄 결과 화면 ----- -->
     <div id="resultScreen">
-        <div class="result-message">
+        <!-- 텍스트 영역을 터치하면 초기화 실행 -->
+        <div class="result-message" onclick="secretReset()">
             이미 참여하셨습니다!<br>
             <span>진행요원에게 이 화면을 보여주시고 선물을 수령하세요.</span>
         </div>
         
-        <!-- 뽑았던 카드를 띄워줄 공간 -->
         <div class="card result-card">
             <div class="card-inner">
                 <div class="card-front"></div>
@@ -309,8 +298,29 @@
                 mode: 'no-cors',
                 body: formData
             })
-            .then(() => console.log('시트에 저장 완료 요청 전송됨'))
             .catch(error => console.error('에러 발생!', error));
+        }
+
+        // 💡 수정됨: 터치 이벤트가 안정적으로 카운트되도록 타이머 초기화 로직 보강
+        let resetClickCount = 0;
+        let resetTimer;
+
+        function secretReset() {
+            resetClickCount++;
+            
+            // 기존 타이머를 지우고 새로 설정하여 카운트가 중간에 끊기지 않도록 함
+            clearTimeout(resetTimer); 
+            
+            if (resetClickCount >= 3) {
+                localStorage.removeItem('drawnCardName');
+                alert('🛠️ 진행요원 기능: 초기화되었습니다.');
+                location.reload(); 
+            }
+            
+            // 2초 내에 다음 터치가 없으면 카운트를 0으로 초기화
+            resetTimer = setTimeout(() => {
+                resetClickCount = 0;
+            }, 2000);
         }
     </script>
 
