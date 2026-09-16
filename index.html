@@ -55,7 +55,8 @@
     </div>
 
     <script>
-        const scriptURL = "https://script.google.com/macros/s/AKfycbzdztwuybf2EGffQ1d_F9ezHOZhrDplzhksRNaRsqwtH68YTpyIMtfttTH8P7khHgRw/exec"; 
+        // 💡 주신 새로운 URL로 교체 완료!
+        const scriptURL = "https://script.google.com/macros/s/AKfycbwvmj7IACrkA8kCeLrigXpbWtL9OQGvdroKK2ZAK8RnhttJ4NeN6cuAMg8U-LZiDhw/exec"; 
 
         const MAX_LIMITS = { '주사기': 2, '마스크': 3, '손과 물': 4 };
 
@@ -84,7 +85,6 @@
                     let availableItems = [];
                     for (let key in MAX_LIMITS) {
                         let currentCount = counts[key] || 0;
-                        // 💡 콘솔창에 현재 수량이 몇개로 읽히는지 출력합니다.
                         console.log(`[수량체크] ${key}: ${currentCount}개 뽑힘 / 제한 ${MAX_LIMITS[key]}개`);
                         
                         if (currentCount < MAX_LIMITS[key]) {
@@ -113,7 +113,6 @@
                     renderCards(drawPool);
                 })
                 .catch(error => {
-                    // 🚨 구글 시트에서 데이터를 못 가져오면 경고창을 띄웁니다!
                     console.error('수량 가져오기 에러:', error);
                     alert("⚠️ 구글 스크립트 연결 에러!\n수량 파악에 실패하여 제한 없이 작동합니다.\n(구글 스크립트에서 '새 배포'를 다시 진행해주세요)");
                     
@@ -186,7 +185,6 @@
             const formData = new FormData();
             formData.append('cardName', cardName);
 
-            // 💡 데이터 전송
             fetch(scriptURL, { 
                 method: 'POST', 
                 mode: 'no-cors',
