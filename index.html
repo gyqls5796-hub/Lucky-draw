@@ -129,7 +129,13 @@
             left: 0;
             background-color: #1a1a2e;
             z-index: 200;
-            gap: 220px; /* 카드 확대 크기를 고려한 여백 */
+            
+            /* 텍스트와 카드 사이의 여백을 넉넉하게 변경 */
+            gap: 250px; 
+            
+            /* 전체 화면을 살짝 위로 올리기 위해 하단 패딩 추가 */
+            padding-bottom: 60px; 
+            box-sizing: border-box;
         }
 
         .result-message {
@@ -147,7 +153,7 @@
             font-weight: normal;
         }
 
-        /* 결과 화면의 카드 크기 (클릭된 애니메이션 후의 크기와 동일하게 고정) */
+        /* 결과 화면의 카드 크기 */
         .result-card {
             transform: scale(2.6);
             pointer-events: none;
@@ -166,7 +172,13 @@
             .card-desc { font-size: 9px; }
 
             .result-card { transform: scale(3.2); }
-            #resultScreen { gap: 160px; }
+            
+            /* 모바일에서 글자가 겹치지 않게 간격을 더 크게 수정 */
+            #resultScreen { 
+                gap: 220px; 
+                padding-bottom: 80px; /* 폰 화면에서 균형감 있게 조금 더 위로 */
+            }
+            
             .result-message { font-size: 20px; }
             .result-message span { font-size: 14px; }
         }
@@ -227,7 +239,7 @@
         <div class="card result-card">
             <div class="card-inner">
                 <div class="card-front"></div>
-                <div class="card-back" style="border: 3px solid #f39c12;"> <!-- 구분을 위해 금색 테두리 추가 -->
+                <div class="card-back" style="border: 3px solid #f39c12;">
                     <div class="card-icon" id="finalIcon"></div>
                     <div class="card-title" id="finalTitle"></div>
                     <div class="card-desc" id="finalDesc"></div>
@@ -239,44 +251,36 @@
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbzdztwuybf2EGffQ1d_F9ezHOZhrDplzhksRNaRsqwtH68YTpyIMtfttTH8P7khHgRw/exec"; 
 
-        // 카드들의 정보 (새로고침 시 화면을 다시 그리기 위해 저장)
         const cardsData = {
             '주사기': { icon: '💉', desc: '예방접종을 통해 질병을 미리 예방하세요.' },
             '마스크': { icon: '😷', desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
             '손과 물': { icon: '🧼', desc: '흐르는 물에 비누로 30초 이상 손씻기!' }
         };
 
-        // 페이지가 열릴 때 실행
         window.onload = function() {
             const savedCardName = localStorage.getItem('drawnCardName');
             
-            // 만약 유저가 이미 뽑은 카드 이름이 저장되어 있다면
             if (savedCardName && cardsData[savedCardName]) {
-                // 기존의 카드 3장과 상단 텍스트는 숨김
                 document.getElementById('cardContainer').style.display = 'none';
                 document.getElementById('headerText').style.display = 'none';
                 
-                // 결과 화면의 카드에 데이터 입력
                 document.getElementById('finalIcon').innerText = cardsData[savedCardName].icon;
                 document.getElementById('finalTitle').innerText = savedCardName;
                 document.getElementById('finalDesc').innerText = cardsData[savedCardName].desc;
 
-                // 결과 화면 표시
                 document.getElementById('resultScreen').style.display = 'flex';
             }
         };
 
-        let isDrawing = false; // 중복 클릭 방지용 변수
+        let isDrawing = false; 
 
         function selectCard(selectedCard, cardName) {
-            // 이미 뽑는 중이거나, 로컬 스토리지에 기록이 있으면 클릭 무시
             if (isDrawing || localStorage.getItem('drawnCardName')) return;
             isDrawing = true;
 
             const container = document.getElementById('cardContainer');
             const header = document.getElementById('headerText');
             
-            // 중앙 이동 거리 계산
             const rect = selectedCard.getBoundingClientRect();
             const cardCenterX = rect.left + (rect.width / 2);
             const cardCenterY = rect.top + (rect.height / 2);
@@ -286,21 +290,17 @@
             selectedCard.style.setProperty('--move-x', (screenCenterX - cardCenterX) + 'px');
             selectedCard.style.setProperty('--move-y', (screenCenterY - cardCenterY) + 'px');
 
-            // 애니메이션 실행
             selectedCard.classList.add('active');
             container.classList.add('has-active');
             
-            // ★ 스마트폰에 어떤 카드를 뽑았는지 이름을 기록 (새로고침 시 보여주기 위함)
             localStorage.setItem('drawnCardName', cardName);
 
-            // 상단 텍스트 변경
             header.style.opacity = '0';
             setTimeout(() => {
                 header.innerText = cardName + " 카드를 뽑으셨습니다!";
                 header.style.opacity = '1';
             }, 300);
 
-            // 구글 스프레드시트로 데이터 전송
             const formData = new FormData();
             formData.append('cardName', cardName);
 
