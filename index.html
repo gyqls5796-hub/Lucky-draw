@@ -210,7 +210,6 @@
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbzdztwuybf2EGffQ1d_F9ezHOZhrDplzhksRNaRsqwtH68YTpyIMtfttTH8P7khHgRw/exec"; 
 
-        // 💡 테스트용 수량 제한 변경 (주사기 2, 마스크 3, 손과물 4)
         const MAX_LIMITS = {
             '주사기': 2, 
             '마스크': 3, 
@@ -231,7 +230,10 @@
                 return;
             }
 
-            fetch(scriptURL)
+            // 💡 수정됨: URL 끝에 무작위 시간값을 붙여서 브라우저 캐시를 무효화합니다.
+            const noCacheURL = scriptURL + "?t=" + new Date().getTime();
+
+            fetch(noCacheURL)
                 .then(response => response.json())
                 .then(counts => {
                     let availableItems = [];
@@ -351,7 +353,11 @@
             if (resetClickCount >= 3) {
                 localStorage.removeItem('drawnCardName');
                 alert('🛠️ 진행요원 기능: 초기화되었습니다.');
-                location.reload(); 
+                
+                // 💡 수정됨: 초기화 후 새로고침 시 시트에 데이터가 완전히 기록될 수 있도록 0.5초 딜레이를 줍니다.
+                setTimeout(() => {
+                    location.reload(); 
+                }, 500);
             }
             
             resetTimer = setTimeout(() => {
