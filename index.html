@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 💡 수정됨: 모바일에서 더블 탭 확대 방지를 위해 maximum-scale=1.0, user-scalable=no 추가 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>건강 타로 카드 뽑기</title>
     <style>
@@ -20,18 +19,30 @@
             font-family: 'Noto Sans KR', sans-serif;
             overflow: hidden;
             color: white;
-            /* 아이폰 텍스트 선택 방지 */
             -webkit-user-select: none;
             user-select: none;
         }
 
         .header-text {
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             font-size: 24px;
             font-weight: 700;
             text-align: center;
             z-index: 10;
             transition: opacity 0.3s ease;
+        }
+
+        #loadingText {
+            font-size: 16px;
+            color: #f39c12;
+            margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
         }
 
         .card-container {
@@ -50,7 +61,6 @@
             transform-origin: center center;
             --move-x: 0px;
             --move-y: 0px;
-            /* 모바일 터치 하이라이트 제거 */
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -102,9 +112,7 @@
             font-size: 40px;
         }
 
-        .card-front::after {
-            content: "✨";
-        }
+        .card-front::after { content: "✨"; }
 
         .card-back {
             background: #ffffff;
@@ -141,11 +149,10 @@
             text-align: center;
             line-height: 1.5;
             z-index: 201;
-            /* 💡 수정됨: iOS 사파리가 버튼으로 인식하도록 커서 포인터 추가 및 하이라이트 제거 */
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
-            padding: 10px; /* 터치 영역 확보 */
+            padding: 10px; 
         }
 
         .result-message span {
@@ -167,11 +174,7 @@
             .card-title { font-size: 13px; margin-bottom: 4px; }
             .card-desc { font-size: 9px; }
             .result-card { transform: scale(3.2); }
-            
-            #resultScreen { 
-                gap: 220px; 
-                padding-bottom: 80px;
-            }
+            #resultScreen { gap: 220px; padding-bottom: 80px; }
             .result-message { font-size: 20px; }
             .result-message span { font-size: 14px; }
         }
@@ -179,52 +182,22 @@
 </head>
 <body>
 
-    <div class="header-text" id="headerText">
+    <div class="header-text" id="headerText" style="display: none;">
         당신의 건강 타로를 1장 뽑아보세요
     </div>
+    
+    <!-- 수량 파악 중일 때 보여줄 로딩 텍스트 -->
+    <div id="loadingText">현재 남은 상품 수량을 파악 중입니다... ⏳</div>
 
-    <div class="card-container" id="cardContainer">
-        <div class="card" onclick="selectCard(this, '주사기')">
-            <div class="card-inner">
-                <div class="card-front"></div>
-                <div class="card-back">
-                    <div class="card-icon">💉</div>
-                    <div class="card-title">주사기</div>
-                    <div class="card-desc">예방접종을 통해 질병을 미리 예방하세요.</div>
-                </div>
-            </div>
-        </div>
+    <!-- 카드가 동적으로 생성될 빈 컨테이너 -->
+    <div class="card-container" id="cardContainer" style="display: none;"></div>
 
-        <div class="card" onclick="selectCard(this, '마스크')">
-            <div class="card-inner">
-                <div class="card-front"></div>
-                <div class="card-back">
-                    <div class="card-icon">😷</div>
-                    <div class="card-title">마스크</div>
-                    <div class="card-desc">기침예절을 지켜 모두의 건강을 보호하세요.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" onclick="selectCard(this, '손과 물')">
-            <div class="card-inner">
-                <div class="card-front"></div>
-                <div class="card-back">
-                    <div class="card-icon">🧼</div>
-                    <div class="card-title">손과 물</div>
-                    <div class="card-desc">흐르는 물에 비누로 30초 이상 손씻기!</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- 결과 화면 (초기화 기능 포함) -->
     <div id="resultScreen">
-        <!-- 텍스트 영역을 터치하면 초기화 실행 -->
         <div class="result-message" onclick="secretReset()">
             이미 참여하셨습니다!<br>
             <span>진행요원에게 이 화면을 보여주시고 선물을 수령하세요.</span>
         </div>
-        
         <div class="card result-card">
             <div class="card-inner">
                 <div class="card-front"></div>
@@ -240,6 +213,13 @@
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbzdztwuybf2EGffQ1d_F9ezHOZhrDplzhksRNaRsqwtH68YTpyIMtfttTH8P7khHgRw/exec"; 
 
+        // 💡 수정됨: 각 물품별 최대 수량(제한 갯수) 설정 (필요에 따라 숫자 수정 가능)
+        const MAX_LIMITS = {
+            '주사기': 100, 
+            '마스크': 200, 
+            '손과 물': 150 
+        };
+
         const cardsData = {
             '주사기': { icon: '💉', desc: '예방접종을 통해 질병을 미리 예방하세요.' },
             '마스크': { icon: '😷', desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
@@ -247,19 +227,95 @@
         };
 
         window.onload = function() {
+            // 1. 이미 참여했는지 확인
             const savedCardName = localStorage.getItem('drawnCardName');
-            
             if (savedCardName && cardsData[savedCardName]) {
-                document.getElementById('cardContainer').style.display = 'none';
-                document.getElementById('headerText').style.display = 'none';
-                
-                document.getElementById('finalIcon').innerText = cardsData[savedCardName].icon;
-                document.getElementById('finalTitle').innerText = savedCardName;
-                document.getElementById('finalDesc').innerText = cardsData[savedCardName].desc;
-
-                document.getElementById('resultScreen').style.display = 'flex';
+                document.getElementById('loadingText').style.display = 'none';
+                showResultScreen(savedCardName);
+                return;
             }
+
+            // 2. 참여하지 않았다면 구글 시트에서 수량 불러오기
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(counts => {
+                    // 제한 수량을 넘지 않은(재고가 있는) 아이템만 걸러내기
+                    let availableItems = [];
+                    for (let key in MAX_LIMITS) {
+                        let currentCount = counts[key] || 0;
+                        if (currentCount < MAX_LIMITS[key]) {
+                            availableItems.push(key);
+                        }
+                    }
+
+                    // 재고가 하나도 없을 경우 처리
+                    if (availableItems.length === 0) {
+                        document.getElementById('loadingText').style.display = 'none';
+                        document.getElementById('headerText').style.display = 'block';
+                        document.getElementById('headerText').innerText = "모든 상품이 소진되었습니다 😭";
+                        return;
+                    }
+
+                    // 3장의 카드를 구성하기
+                    let drawPool = [];
+                    // 우선 남은 종류를 골고루 하나씩 넣음
+                    availableItems.forEach(item => {
+                        if (drawPool.length < 3) drawPool.push(item);
+                    });
+                    
+                    // 만약 종류가 부족해서 3장이 안 되면, 남은 것 중에 랜덤으로 중복해서 채워 3장을 맞춤
+                    while (drawPool.length < 3) {
+                        let randomFallback = availableItems[Math.floor(Math.random() * availableItems.length)];
+                        drawPool.push(randomFallback);
+                    }
+
+                    // 💡 요청사항 1번: 카드 위치 매번 완전 랜덤하게 섞기
+                    drawPool.sort(() => Math.random() - 0.5);
+
+                    // 화면에 카드 그리기
+                    renderCards(drawPool);
+                })
+                .catch(error => {
+                    console.error('수량 가져오기 에러:', error);
+                    // 인터넷 문제 등으로 못 불러올 경우 기본 3장 랜덤 섞기로 진행
+                    let fallbackPool = ['주사기', '마스크', '손과 물'].sort(() => Math.random() - 0.5);
+                    renderCards(fallbackPool);
+                });
         };
+
+        function showResultScreen(cardName) {
+            document.getElementById('finalIcon').innerText = cardsData[cardName].icon;
+            document.getElementById('finalTitle').innerText = cardName;
+            document.getElementById('finalDesc').innerText = cardsData[cardName].desc;
+            document.getElementById('resultScreen').style.display = 'flex';
+        }
+
+        // 카드를 화면에 동적으로 생성하는 함수
+        function renderCards(cardNames) {
+            document.getElementById('loadingText').style.display = 'none';
+            document.getElementById('headerText').style.display = 'block';
+            const container = document.getElementById('cardContainer');
+            container.style.display = 'flex';
+            container.innerHTML = ''; // 비우기
+
+            cardNames.forEach(cardName => {
+                const data = cardsData[cardName];
+                // 뒷면은 같지만 카드를 뒤집으면 결정된 데이터가 나옴
+                const cardHTML = `
+                    <div class="card" onclick="selectCard(this, '${cardName}')">
+                        <div class="card-inner">
+                            <div class="card-front"></div>
+                            <div class="card-back">
+                                <div class="card-icon">${data.icon}</div>
+                                <div class="card-title">${cardName}</div>
+                                <div class="card-desc">${data.desc}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        }
 
         let isDrawing = false; 
 
@@ -301,14 +357,11 @@
             .catch(error => console.error('에러 발생!', error));
         }
 
-        // 💡 수정됨: 터치 이벤트가 안정적으로 카운트되도록 타이머 초기화 로직 보강
         let resetClickCount = 0;
         let resetTimer;
 
         function secretReset() {
             resetClickCount++;
-            
-            // 기존 타이머를 지우고 새로 설정하여 카운트가 중간에 끊기지 않도록 함
             clearTimeout(resetTimer); 
             
             if (resetClickCount >= 3) {
@@ -317,7 +370,6 @@
                 location.reload(); 
             }
             
-            // 2초 내에 다음 터치가 없으면 카운트를 0으로 초기화
             resetTimer = setTimeout(() => {
                 resetClickCount = 0;
             }, 2000);
