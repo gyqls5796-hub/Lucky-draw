@@ -36,29 +36,23 @@
             position: relative;
         }
 
-        /* 카드 기본 스타일 */
         .card {
             width: 160px;
             height: 260px;
             perspective: 1000px;
             cursor: pointer;
-            /* 중심 이동(var(--move-x), y) 및 크기 확대를 위한 transition */
             transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s;
             position: relative;
             transform-origin: center center;
-            /* JS에서 계산할 이동 거리를 저장할 변수 초기화 */
             --move-x: 0px;
             --move-y: 0px;
         }
 
-        /* 카드가 선택되었을 때: 화면 정중앙으로 이동하며 크게 확장 */
         .card.active {
-            /* JS에서 계산한 화면 중앙 값으로 이동 + 2.5배 확대 */
             transform: translate(var(--move-x), var(--move-y)) scale(2.6);
             z-index: 100;
         }
 
-        /* 선택되지 않은 나머지 카드들 (안 보이게 숨기기) */
         .card-container.has-active .card:not(.active) {
             opacity: 0;
             pointer-events: none;
@@ -74,10 +68,9 @@
             border-radius: 15px;
         }
 
-        /* 카드가 뒤집혔을 때 */
         .card.active .card-inner {
             transform: rotateY(180deg);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6); /* 확장되었을 때 그림자 강화 */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
 
         .card-front, .card-back {
@@ -93,11 +86,9 @@
             text-align: center;
             padding: 15px;
             box-sizing: border-box;
-            /* 뒷면 텍스트가 깨지지 않도록 랜더링 최적화 */
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 카드 뒷면 (처음 보여지는 타로 카드 문양 부분) */
         .card-front {
             background: linear-gradient(135deg, #2c3e50, #4ca1af);
             border: 2px solid #f39c12;
@@ -109,7 +100,6 @@
             content: "✨";
         }
 
-        /* 카드 앞면 (결과 내용) */
         .card-back {
             background: #ffffff;
             color: #333;
@@ -117,49 +107,26 @@
             border: 2px solid #ddd;
         }
 
-        .card-icon {
-            font-size: 50px;
-            margin-bottom: 10px;
+        .card-icon { font-size: 50px; margin-bottom: 10px; }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #2c3e50; }
+        .card-desc { font-size: 11px; color: #666; word-break: keep-all; line-height: 1.4; }
+
+        #alreadyParticipated {
+            display: none;
+            font-size: 20px;
+            color: #f39c12;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.5;
         }
 
-        .card-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-
-        .card-desc {
-            font-size: 11px;
-            color: #666;
-            word-break: keep-all;
-            line-height: 1.4;
-        }
-
-        /* 모바일 화면 대응 */
         @media (max-width: 600px) {
-            .card-container {
-                gap: 12px;
-            }
-            .card {
-                width: 100px;
-                height: 160px;
-            }
-            /* 모바일에서는 카드 기본 크기가 작으므로 더 많이(3.2배) 확대해야 화면에 가득 찹니다 */
-            .card.active {
-                transform: translate(var(--move-x), var(--move-y)) scale(3.2);
-            }
-            .card-icon {
-                font-size: 35px;
-                margin-bottom: 5px;
-            }
-            .card-title {
-                font-size: 13px;
-                margin-bottom: 4px;
-            }
-            .card-desc {
-                font-size: 9px;
-            }
+            .card-container { gap: 12px; }
+            .card { width: 100px; height: 160px; }
+            .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); }
+            .card-icon { font-size: 35px; margin-bottom: 5px; }
+            .card-title { font-size: 13px; margin-bottom: 4px; }
+            .card-desc { font-size: 9px; }
         }
     </style>
 </head>
@@ -169,9 +136,14 @@
         당신의 건강 타로를 1장 뽑아보세요
     </div>
 
+    <!-- 이미 참여한 유저에게 보여줄 메시지 -->
+    <div id="alreadyParticipated">
+        이미 이벤트에 참여하셨습니다!<br>선물 수령처로 이동해 주세요.
+    </div>
+
     <div class="card-container" id="cardContainer">
-        <!-- 카드 1 -->
-        <div class="card" onclick="selectCard(this)">
+        <!-- 클릭 시 어떤 카드를 뽑았는지 이름을 같이 넘겨줍니다 -->
+        <div class="card" onclick="selectCard(this, '주사기')">
             <div class="card-inner">
                 <div class="card-front"></div>
                 <div class="card-back">
@@ -182,20 +154,18 @@
             </div>
         </div>
 
-        <!-- 카드 2 -->
-        <div class="card" onclick="selectCard(this)">
+        <div class="card" onclick="selectCard(this, '마스크')">
             <div class="card-inner">
                 <div class="card-front"></div>
                 <div class="card-back">
                     <div class="card-icon">😷</div>
                     <div class="card-title">마스크</div>
-                    <div class="card-desc">기침예정을 지켜 모두의 건강을 보호하세요.</div>
+                    <div class="card-desc">기침예절을 지켜 모두의 건강을 보호하세요.</div>
                 </div>
             </div>
         </div>
 
-        <!-- 카드 3 -->
-        <div class="card" onclick="selectCard(this)">
+        <div class="card" onclick="selectCard(this, '손과 물')">
             <div class="card-inner">
                 <div class="card-front"></div>
                 <div class="card-back">
@@ -208,57 +178,63 @@
     </div>
 
     <script>
-        function selectCard(selectedCard) {
+        // 전달해주신 구글 웹 앱 URL이 적용되었습니다.
+        const scriptURL = "https://script.google.com/macros/s/AKfycbzdztwuybf2EGffQ1d_F9ezHOZhrDplzhksRNaRsqwtH68YTpyIMtfttTH8P7khHgRw/exec"; 
+
+        // 페이지가 열릴 때 이미 참여한 기록이 있는지 확인합니다.
+        window.onload = function() {
+            if (localStorage.getItem('hasDrawnTarot')) {
+                document.getElementById('cardContainer').style.display = 'none';
+                document.getElementById('headerText').style.display = 'none';
+                document.getElementById('alreadyParticipated').style.display = 'block';
+            }
+        };
+
+        let isDrawing = false; // 중복 클릭 방지용 변수
+
+        function selectCard(selectedCard, cardName) {
+            // 이미 뽑는 중이거나 새로고침 꼼수를 썼다면 차단
+            if (isDrawing || localStorage.getItem('hasDrawnTarot')) return;
+            isDrawing = true;
+
             const container = document.getElementById('cardContainer');
             const header = document.getElementById('headerText');
             
-            // 이미 선택된 상태라면 원래대로 되돌리기 (초기화)
-            if (selectedCard.classList.contains('active')) {
-                selectedCard.classList.remove('active');
-                container.classList.remove('has-active');
-                
-                // CSS 변수 초기화
-                selectedCard.style.removeProperty('--move-x');
-                selectedCard.style.removeProperty('--move-y');
-                
-                header.style.opacity = '1';
-                header.innerText = "당신의 건강 타로를 1장 뽑아보세요";
-                return;
-            }
-
-            // 다른 카드가 이미 선택되어 진행 중이라면 막기
-            if (container.classList.contains('has-active')) {
-                return; 
-            }
-
-            // --- 정중앙 이동 거리 계산 로직 ---
-            // 1. 클릭한 카드의 현재 화면상 위치 구하기
+            // 중앙 이동 거리 계산
             const rect = selectedCard.getBoundingClientRect();
             const cardCenterX = rect.left + (rect.width / 2);
             const cardCenterY = rect.top + (rect.height / 2);
-            
-            // 2. 화면 전체의 정중앙 좌표 구하기
             const screenCenterX = window.innerWidth / 2;
             const screenCenterY = window.innerHeight / 2;
             
-            // 3. 이동해야 할 X, Y 거리 계산
-            const moveX = screenCenterX - cardCenterX;
-            const moveY = screenCenterY - cardCenterY;
-            
-            // 4. CSS 변수에 계산된 값 적용
-            selectedCard.style.setProperty('--move-x', moveX + 'px');
-            selectedCard.style.setProperty('--move-y', moveY + 'px');
+            selectedCard.style.setProperty('--move-x', (screenCenterX - cardCenterX) + 'px');
+            selectedCard.style.setProperty('--move-y', (screenCenterY - cardCenterY) + 'px');
 
-            // --- 애니메이션 실행 ---
+            // 애니메이션 실행
             selectedCard.classList.add('active');
             container.classList.add('has-active');
             
+            // 스마트폰에 "이 사람은 뽑았다"는 기록을 남김 (새로고침 방지)
+            localStorage.setItem('hasDrawnTarot', 'true');
+
             // 상단 텍스트 변경
             header.style.opacity = '0';
             setTimeout(() => {
-                header.innerText = "결과가 나왔습니다!";
+                header.innerText = cardName + " 카드를 뽑으셨습니다!";
                 header.style.opacity = '1';
             }, 300);
+
+            // 구글 스프레드시트로 데이터 전송
+            const formData = new FormData();
+            formData.append('cardName', cardName);
+
+            fetch(scriptURL, { 
+                method: 'POST', 
+                mode: 'no-cors', // CORS 보안 에러 방지
+                body: formData
+            })
+            .then(() => console.log('시트에 저장 완료 요청 전송됨'))
+            .catch(error => console.error('에러 발생!', error));
         }
     </script>
 
