@@ -8,9 +8,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
 
         body { margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #1a1a2e; font-family: 'Noto Sans KR', sans-serif; overflow: hidden; color: white; -webkit-user-select: none; user-select: none; }
+        
         .header-text { margin-bottom: 20px; font-size: 24px; font-weight: 700; text-align: center; z-index: 10; transition: opacity 0.3s ease; }
-        #loadingText { font-size: 16px; color: #f39c12; margin-bottom: 20px; animation: pulse 1.5s infinite; }
+        
+        /* 로딩 텍스트 스타일 */
+        #loadingText { font-size: 16px; color: #f39c12; margin-bottom: 20px; animation: pulse 1.5s infinite; text-align: center; line-height: 1.5; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        
         .card-container { display: flex; gap: 20px; position: relative; }
         .card { width: 160px; height: 260px; perspective: 1000px; cursor: pointer; transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s; position: relative; transform-origin: center center; --move-x: 0px; --move-y: 0px; -webkit-tap-highlight-color: transparent; }
         .card.active { transform: translate(var(--move-x), var(--move-y)) scale(2.6); z-index: 100; }
@@ -34,7 +38,10 @@
 <body>
 
     <div class="header-text" id="headerText" style="display: none;">당신의 건강 타로를 1장 뽑아보세요</div>
+    
+    <!-- 로딩 텍스트 -->
     <div id="loadingText">현재 남은 상품 수량을 파악 중입니다... ⏳</div>
+    
     <div class="card-container" id="cardContainer" style="display: none;"></div>
 
     <div id="resultScreen">
@@ -57,15 +64,16 @@
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbwvmj7IACrkA8kCeLrigXpbWtL9OQGvdroKK2ZAK8RnhttJ4NeN6cuAMg8U-LZiDhw/exec"; 
 
-        // 💡 실전 행사용 수량으로 변경 완료 (총 600개)
         const MAX_LIMITS = { '주사기': 200, '마스크': 300, '손과 물': 100 };
 
-        // 💡 나중에 그림이나 멘트를 바꾸실 때는 이 부분의 내용을 수정하시면 됩니다.
         const cardsData = {
             '주사기': { icon: '💉', desc: '예방접종을 통해 질병을 미리 예방하세요.' },
             '마스크': { icon: '😷', desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
             '손과 물': { icon: '🧼', desc: '흐르는 물에 비누로 30초 이상 손씻기!' }
         };
+
+        let isDrawing = false; 
+        let cardsRendered = false; // 카드가 이미 화면에 표시되었는지 체크하는 변수
 
         window.onload = function() {
             const savedCardName = localStorage.getItem('drawnCardName');
@@ -75,19 +83,31 @@
                 return;
             }
 
+            // 💡 무한 로딩 방지 타임아웃 (3초)
+            // 3초(3000ms)가 지났는데도 구글 응답이 없으면 묻지도 따지지도 않고 강제로 기본 카드 3장을 띄웁니다.
+            const loadingTimeout = setTimeout(() => {
+                if (!cardsRendered) {
+                    console.log("3초 초과! 구글 서버 지연으로 인해 강제로 카드를 표시합니다.");
+                    let fallbackPool = ['주사기', '마스크', '손과 물'].sort(() => Math.random() - 0.5);
+                    renderCards(fallbackPool);
+                }
+            }, 3000); 
+
             const noCacheURL = scriptURL + "?t=" + new Date().getTime();
 
             fetch(noCacheURL)
                 .then(response => {
-                    if (!response.ok) throw new Error("네트워크 응답이 정상이 아닙니다.");
+                    if (!response.ok) throw new Error("네트워크 응답 에러");
                     return response.json();
                 })
                 .then(counts => {
+                    // 이미 타임아웃으로 카드가 켜졌다면(3초 넘김) 무시합니다.
+                    if (cardsRendered) return; 
+                    clearTimeout(loadingTimeout); // 3초가 안 지났다면 타임아웃 타이머를 정지시킵니다.
+
                     let availableItems = [];
                     for (let key in MAX_LIMITS) {
                         let currentCount = counts[key] || 0;
-                        console.log(`[수량체크] ${key}: ${currentCount}개 뽑힘 / 제한 ${MAX_LIMITS[key]}개`);
-                        
                         if (currentCount < MAX_LIMITS[key]) {
                             availableItems.push(key);
                         }
@@ -110,13 +130,13 @@
                         drawPool.push(randomFallback);
                     }
 
-                    drawPool.sort(() => Math.random() - 0.5);
-                    renderCards(drawPool);
+                    renderCards(drawPool.sort(() => Math.random() - 0.5));
                 })
                 .catch(error => {
-                    console.error('수량 가져오기 에러:', error);
-                    alert("⚠️ 구글 스크립트 연결 에러!\n수량 파악에 실패하여 제한 없이 작동합니다.\n(구글 스크립트에서 '새 배포'를 다시 진행해주세요)");
-                    
+                    // 에러가 났을 때도 무한 로딩에 빠지지 않게 강제로 카드를 띄웁니다.
+                    if (cardsRendered) return;
+                    clearTimeout(loadingTimeout);
+                    console.error('수량 체크 에러 (강제 진행):', error);
                     let fallbackPool = ['주사기', '마스크', '손과 물'].sort(() => Math.random() - 0.5);
                     renderCards(fallbackPool);
                 });
@@ -130,8 +150,10 @@
         }
 
         function renderCards(cardNames) {
+            cardsRendered = true; // 카드가 그려졌다고 표시
             document.getElementById('loadingText').style.display = 'none';
             document.getElementById('headerText').style.display = 'block';
+            
             const container = document.getElementById('cardContainer');
             container.style.display = 'flex';
             container.innerHTML = ''; 
@@ -153,8 +175,6 @@
                 container.innerHTML += cardHTML;
             });
         }
-
-        let isDrawing = false; 
 
         function selectCard(selectedCard, cardName) {
             if (isDrawing || localStorage.getItem('drawnCardName')) return;
@@ -190,8 +210,7 @@
                 method: 'POST', 
                 mode: 'no-cors',
                 body: formData
-            })
-            .catch(error => console.error('에러 발생!', error));
+            }).catch(error => console.log('에러 발생!', error));
         }
 
         let resetClickCount = 0;
@@ -203,8 +222,7 @@
             
             if (resetClickCount >= 3) {
                 localStorage.removeItem('drawnCardName');
-                alert('🛠️ 초기화 완료! 카드를 뽑은 후 시트에 기록되었는지 확인하고 초기화했는지 주의하세요.');
-                
+                alert('🛠️ 초기화 완료!');
                 setTimeout(() => { location.reload(); }, 500);
             }
             
