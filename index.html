@@ -11,7 +11,6 @@
         
         .header-text { margin-bottom: 20px; font-size: 24px; font-weight: 700; text-align: center; z-index: 10; transition: opacity 0.3s ease; }
         
-        /* 로딩 텍스트 스타일 */
         #loadingText { font-size: 16px; color: #f39c12; margin-bottom: 20px; animation: pulse 1.5s infinite; text-align: center; line-height: 1.5; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
         
@@ -25,23 +24,24 @@
         .card-front { background: linear-gradient(135deg, #2c3e50, #4ca1af); border: 2px solid #f39c12; color: #f39c12; font-size: 40px; }
         .card-front::after { content: "✨"; }
         .card-back { background: #ffffff; color: #333; transform: rotateY(180deg); border: 2px solid #ddd; }
-        .card-icon { font-size: 50px; margin-bottom: 10px; }
+        
+        /* 아이콘 영역 설정 */
+        .card-icon { font-size: 50px; margin-bottom: 10px; display: flex; justify-content: center; align-items: center; height: 60px; }
         .card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #2c3e50; }
         .card-desc { font-size: 11px; color: #666; word-break: keep-all; line-height: 1.4; }
+        
         #resultScreen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100vh; position: absolute; top: 0; left: 0; background-color: #1a1a2e; z-index: 200; gap: 250px; padding-bottom: 60px; box-sizing: border-box; }
         .result-message { font-size: 24px; color: #f39c12; font-weight: bold; text-align: center; line-height: 1.5; z-index: 201; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; padding: 10px; }
         .result-message span { font-size: 16px; color: #ffffff; font-weight: normal; }
         .result-card { transform: scale(2.6); pointer-events: none; }
-        @media (max-width: 600px) { .card-container { gap: 12px; } .card { width: 100px; height: 160px; } .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); } .card-icon { font-size: 35px; margin-bottom: 5px; } .card-title { font-size: 13px; margin-bottom: 4px; } .card-desc { font-size: 9px; } .result-card { transform: scale(3.2); } #resultScreen { gap: 220px; padding-bottom: 80px; } .result-message { font-size: 20px; } .result-message span { font-size: 14px; } }
+        
+        @media (max-width: 600px) { .card-container { gap: 12px; } .card { width: 100px; height: 160px; } .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); } .card-icon { font-size: 35px; height: 45px; margin-bottom: 5px; } .card-title { font-size: 13px; margin-bottom: 4px; } .card-desc { font-size: 9px; } .result-card { transform: scale(3.2); } #resultScreen { gap: 220px; padding-bottom: 80px; } .result-message { font-size: 20px; } .result-message span { font-size: 14px; } }
     </style>
 </head>
 <body>
 
     <div class="header-text" id="headerText" style="display: none;">당신의 건강 타로를 1장 뽑아보세요</div>
-    
-    <!-- 로딩 텍스트 -->
     <div id="loadingText">현재 남은 상품 수량을 파악 중입니다... ⏳</div>
-    
     <div class="card-container" id="cardContainer" style="display: none;"></div>
 
     <div id="resultScreen">
@@ -64,16 +64,23 @@
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbwvmj7IACrkA8kCeLrigXpbWtL9OQGvdroKK2ZAK8RnhttJ4NeN6cuAMg8U-LZiDhw/exec"; 
 
-        const MAX_LIMITS = { '주사기': 200, '마스크': 300, '손과 물': 100 };
+        // 💡 손과 물 -> 손씻기로 변경 및 수량 유지
+        const MAX_LIMITS = { '주사기': 200, '마스크': 300, '손씻기': 100 };
 
+        // 🎨 직접 그린 깨지지 않는 고화질 아이콘 (얼굴 없는 마스크 & 거품 묻은 손)
+        const svgMask = `<svg width="55" height="55" viewBox="0 0 24 24" fill="#e2e8f0" stroke="#2c3e50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2" ry="2"></rect><path d="M3 10h18M3 14h18M2 7l2-2M22 7l-2-2M2 17l2 2M22 17l-2 2"></path></svg>`;
+        
+        const svgWash = `<svg width="55" height="55" viewBox="0 0 24 24" fill="none" stroke="#2c3e50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path><path d="M14 10V5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6"></path><path d="M6 13.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7.5"></path><path d="M20.5 14.5c-.8-1.5-2.5-2.5-4.5-2.5h-1"></path><path d="M4 16.5A4.5 4.5 0 0 0 8.5 21h7a4.5 4.5 0 0 0 4.5-4.5v-2"></path><circle cx="18" cy="5" r="1.5" fill="#3498db" stroke="none"></circle><circle cx="21" cy="8" r="1.2" fill="#3498db" stroke="none"></circle><circle cx="15" cy="2" r="1" fill="#3498db" stroke="none"></circle><circle cx="6" cy="4" r="1.5" fill="#3498db" stroke="none"></circle><circle cx="3" cy="7" r="1" fill="#3498db" stroke="none"></circle></svg>`;
+
+        // 💡 나중에 이미지를 바꾸고 싶으시다면 svgMask 부분 대신 `<img src="이미지주소.jpg" width="50">` 처럼 넣으시면 됩니다.
         const cardsData = {
             '주사기': { icon: '💉', desc: '예방접종을 통해 질병을 미리 예방하세요.' },
-            '마스크': { icon: '😷', desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
-            '손과 물': { icon: '🧼', desc: '흐르는 물에 비누로 30초 이상 손씻기!' }
+            '마스크': { icon: svgMask, desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
+            '손씻기': { icon: svgWash, desc: '흐르는 물에 비누로 30초 이상 손씻기!' }
         };
 
         let isDrawing = false; 
-        let cardsRendered = false; // 카드가 이미 화면에 표시되었는지 체크하는 변수
+        let cardsRendered = false; 
 
         window.onload = function() {
             const savedCardName = localStorage.getItem('drawnCardName');
@@ -83,12 +90,10 @@
                 return;
             }
 
-            // 💡 무한 로딩 방지 타임아웃 (3초)
-            // 3초(3000ms)가 지났는데도 구글 응답이 없으면 묻지도 따지지도 않고 강제로 기본 카드 3장을 띄웁니다.
             const loadingTimeout = setTimeout(() => {
                 if (!cardsRendered) {
-                    console.log("3초 초과! 구글 서버 지연으로 인해 강제로 카드를 표시합니다.");
-                    let fallbackPool = ['주사기', '마스크', '손과 물'].sort(() => Math.random() - 0.5);
+                    console.log("3초 초과! 강제 진행");
+                    let fallbackPool = ['주사기', '마스크', '손씻기'].sort(() => Math.random() - 0.5);
                     renderCards(fallbackPool);
                 }
             }, 3000); 
@@ -101,9 +106,8 @@
                     return response.json();
                 })
                 .then(counts => {
-                    // 이미 타임아웃으로 카드가 켜졌다면(3초 넘김) 무시합니다.
                     if (cardsRendered) return; 
-                    clearTimeout(loadingTimeout); // 3초가 안 지났다면 타임아웃 타이머를 정지시킵니다.
+                    clearTimeout(loadingTimeout); 
 
                     let availableItems = [];
                     for (let key in MAX_LIMITS) {
@@ -133,24 +137,23 @@
                     renderCards(drawPool.sort(() => Math.random() - 0.5));
                 })
                 .catch(error => {
-                    // 에러가 났을 때도 무한 로딩에 빠지지 않게 강제로 카드를 띄웁니다.
                     if (cardsRendered) return;
                     clearTimeout(loadingTimeout);
                     console.error('수량 체크 에러 (강제 진행):', error);
-                    let fallbackPool = ['주사기', '마스크', '손과 물'].sort(() => Math.random() - 0.5);
+                    let fallbackPool = ['주사기', '마스크', '손씻기'].sort(() => Math.random() - 0.5);
                     renderCards(fallbackPool);
                 });
         };
 
         function showResultScreen(cardName) {
-            document.getElementById('finalIcon').innerText = cardsData[cardName].icon;
+            document.getElementById('finalIcon').innerHTML = cardsData[cardName].icon;
             document.getElementById('finalTitle').innerText = cardName;
             document.getElementById('finalDesc').innerText = cardsData[cardName].desc;
             document.getElementById('resultScreen').style.display = 'flex';
         }
 
         function renderCards(cardNames) {
-            cardsRendered = true; // 카드가 그려졌다고 표시
+            cardsRendered = true; 
             document.getElementById('loadingText').style.display = 'none';
             document.getElementById('headerText').style.display = 'block';
             
