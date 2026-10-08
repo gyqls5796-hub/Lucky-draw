@@ -20,22 +20,21 @@
         .card-container.has-active .card:not(.active) { opacity: 0; pointer-events: none; }
         .card-inner { width: 100%; height: 100%; position: relative; transition: transform 0.8s cubic-bezier(0.25, 0.8, 0.25, 1); transform-style: preserve-3d; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-radius: 15px; }
         .card.active .card-inner, .result-card .card-inner { transform: rotateY(180deg); box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-        .card-front, .card-back { width: 100%; height: 100%; position: absolute; backface-visibility: hidden; border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 15px; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        .card-front, .card-back { width: 100%; height: 100%; position: absolute; backface-visibility: hidden; border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; overflow: hidden;}
+        
         .card-front { background: linear-gradient(135deg, #2c3e50, #4ca1af); border: 2px solid #f39c12; color: #f39c12; font-size: 40px; }
         .card-front::after { content: "✨"; }
         .card-back { background: #ffffff; color: #333; transform: rotateY(180deg); border: 2px solid #ddd; }
         
-        /* 아이콘 영역 설정 */
-        .card-icon { font-size: 50px; margin-bottom: 10px; display: flex; justify-content: center; align-items: center; height: 60px; }
-        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #2c3e50; }
-        .card-desc { font-size: 11px; color: #666; word-break: keep-all; line-height: 1.4; }
+        /* 💡 이미지 꽉 차게 설정 */
+        .card-image { width: 100%; height: 100%; object-fit: cover; }
         
         #resultScreen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100vh; position: absolute; top: 0; left: 0; background-color: #1a1a2e; z-index: 200; gap: 250px; padding-bottom: 60px; box-sizing: border-box; }
         .result-message { font-size: 24px; color: #f39c12; font-weight: bold; text-align: center; line-height: 1.5; z-index: 201; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; padding: 10px; }
         .result-message span { font-size: 16px; color: #ffffff; font-weight: normal; }
         .result-card { transform: scale(2.6); pointer-events: none; }
-        
-        @media (max-width: 600px) { .card-container { gap: 12px; } .card { width: 100px; height: 160px; } .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); } .card-icon { font-size: 35px; height: 45px; margin-bottom: 5px; } .card-title { font-size: 13px; margin-bottom: 4px; } .card-desc { font-size: 9px; } .result-card { transform: scale(3.2); } #resultScreen { gap: 220px; padding-bottom: 80px; } .result-message { font-size: 20px; } .result-message span { font-size: 14px; } }
+
+        @media (max-width: 600px) { .card-container { gap: 12px; } .card { width: 100px; height: 160px; } .card.active { transform: translate(var(--move-x), var(--move-y)) scale(3.2); } .result-card { transform: scale(3.2); } #resultScreen { gap: 220px; padding-bottom: 80px; } .result-message { font-size: 20px; } .result-message span { font-size: 14px; } }
     </style>
 </head>
 <body>
@@ -52,10 +51,8 @@
         <div class="card result-card">
             <div class="card-inner">
                 <div class="card-front"></div>
-                <div class="card-back" style="border: 3px solid #f39c12;">
-                    <div class="card-icon" id="finalIcon"></div>
-                    <div class="card-title" id="finalTitle"></div>
-                    <div class="card-desc" id="finalDesc"></div>
+                <div class="card-back" style="border: 3px solid #f39c12;" id="finalCardBack">
+                    <!-- 이미지가 들어갈 자리 -->
                 </div>
             </div>
         </div>
@@ -64,19 +61,13 @@
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbwvmj7IACrkA8kCeLrigXpbWtL9OQGvdroKK2ZAK8RnhttJ4NeN6cuAMg8U-LZiDhw/exec"; 
 
-        // 💡 손과 물 -> 손씻기로 변경 및 수량 유지
         const MAX_LIMITS = { '주사기': 200, '마스크': 300, '손씻기': 100 };
 
-        // 🎨 직접 그린 깨지지 않는 고화질 아이콘 (얼굴 없는 마스크 & 거품 묻은 손)
-        const svgMask = `<svg width="55" height="55" viewBox="0 0 24 24" fill="#e2e8f0" stroke="#2c3e50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2" ry="2"></rect><path d="M3 10h18M3 14h18M2 7l2-2M22 7l-2-2M2 17l2 2M22 17l-2 2"></path></svg>`;
-        
-        const svgWash = `<svg width="55" height="55" viewBox="0 0 24 24" fill="none" stroke="#2c3e50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path><path d="M14 10V5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6"></path><path d="M6 13.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7.5"></path><path d="M20.5 14.5c-.8-1.5-2.5-2.5-4.5-2.5h-1"></path><path d="M4 16.5A4.5 4.5 0 0 0 8.5 21h7a4.5 4.5 0 0 0 4.5-4.5v-2"></path><circle cx="18" cy="5" r="1.5" fill="#3498db" stroke="none"></circle><circle cx="21" cy="8" r="1.2" fill="#3498db" stroke="none"></circle><circle cx="15" cy="2" r="1" fill="#3498db" stroke="none"></circle><circle cx="6" cy="4" r="1.5" fill="#3498db" stroke="none"></circle><circle cx="3" cy="7" r="1" fill="#3498db" stroke="none"></circle></svg>`;
-
-        // 💡 나중에 이미지를 바꾸고 싶으시다면 svgMask 부분 대신 `<img src="이미지주소.jpg" width="50">` 처럼 넣으시면 됩니다.
+        // 💡 Google Drive 이미지 URL을 직접 입력합니다.
         const cardsData = {
-            '주사기': { icon: '💉', desc: '예방접종을 통해 질병을 미리 예방하세요.' },
-            '마스크': { icon: svgMask, desc: '기침예절을 지켜 모두의 건강을 보호하세요.' },
-            '손씻기': { icon: svgWash, desc: '흐르는 물에 비누로 30초 이상 손씻기!' }
+            '주사기': { image: 'https://drive.google.com/uc?export=view&id=1001xiD3Y6E97wXPLBcetoc85WctADiFO' },
+            '마스크': { image: 'https://drive.google.com/uc?export=view&id=1HuyqVN7JSiWnn-S6ksnFh5A1Q4EBAcyG' },
+            '손씻기': { image: 'https://drive.google.com/uc?export=view&id=1QTs1YSYxU7tSyGUaYrI29obZsIX78f1p' }
         };
 
         let isDrawing = false; 
@@ -146,9 +137,7 @@
         };
 
         function showResultScreen(cardName) {
-            document.getElementById('finalIcon').innerHTML = cardsData[cardName].icon;
-            document.getElementById('finalTitle').innerText = cardName;
-            document.getElementById('finalDesc').innerText = cardsData[cardName].desc;
+            document.getElementById('finalCardBack').innerHTML = `<img src="${cardsData[cardName].image}" alt="${cardName}" class="card-image">`;
             document.getElementById('resultScreen').style.display = 'flex';
         }
 
@@ -168,9 +157,7 @@
                         <div class="card-inner">
                             <div class="card-front"></div>
                             <div class="card-back">
-                                <div class="card-icon">${data.icon}</div>
-                                <div class="card-title">${cardName}</div>
-                                <div class="card-desc">${data.desc}</div>
+                                <img src="${data.image}" alt="${cardName}" class="card-image">
                             </div>
                         </div>
                     </div>
